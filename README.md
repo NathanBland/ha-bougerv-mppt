@@ -5,7 +5,7 @@ the **ChargePro+ 2.0** app (built for the BougeRV 40A MPPT). It talks to the con
 directly over Bluetooth LE, through a local adapter or an ESPHome Bluetooth proxy. No
 cloud, no account.
 
-> **Status: v0.1.0b1 (beta), untested on hardware.** The protocol was worked out by
+> **Status: v0.1.0b2 (beta), untested on hardware.** The protocol was worked out by
 > statically analysing ChargePro+ 2.0 version 3.0.0. See
 > [docs/protocol-chargepro-3.0.0.md](docs/protocol-chargepro-3.0.0.md) for the protocol
 > and the open questions that still need a real controller to answer, and
@@ -45,12 +45,13 @@ Copy `custom_components/bougerv_mppt` into `<config>/custom_components/` and res
 Close the ChargePro app first: the controller accepts only one Bluetooth connection, and
 Home Assistant keeps its connection open while it polls (every 10 s).
 
-- **Discovery:** Home Assistant offers devices that advertise the `FFE0` service. That's a
+- **Discovery:** controllers advertise the name `ChargePro`, and Home Assistant offers
+  those, plus devices that advertise the `FFE0` service. That's a
   generic BLE serial service also used by other gadgets, so setup connects and reads the
   controller's device info before adding it. Devices that don't answer like a ChargePro
   controller are dropped.
 - **Manual:** *Settings → Devices & services → Add integration → BougeRV MPPT* lists every
-  connectable Bluetooth device nearby (`FFE0` devices first), or lets you type an address.
+  connectable Bluetooth device nearby (likely controllers marked ★ and listed first), or lets you type an address.
 
 Dual-battery ChargePro controllers use a different register layout and are rejected with
 "unsupported model" for now (see [Adding models](#adding-models)). For testing, the manual

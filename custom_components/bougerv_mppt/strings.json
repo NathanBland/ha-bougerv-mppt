@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Pick a controller",
-        "description": "Devices that advertise the FFE0 service are listed first. Setup reads the controller's device info to confirm it is a ChargePro MPPT. Close the ChargePro app first: the controller accepts one connection at a time.",
+        "description": "Likely controllers (named ChargePro, or advertising the FFE0 service) are marked ★ and listed first. Setup reads the controller's device info to confirm it. Close the ChargePro app first: the controller accepts one connection at a time and stops advertising while connected.",
         "data": {
           "address": "Device"
         }
@@ -25,11 +25,12 @@
       }
     },
     "error": {
-      "device_not_found": "No Bluetooth adapter or proxy can currently see this device.",
+      "device_not_found": "No Bluetooth adapter or proxy is hearing this device right now. Check it's in range of an active proxy, and that the ChargePro app is fully closed: the controller stops advertising while a phone is connected.",
       "cannot_connect": "Could not connect. Move the controller closer to an adapter and make sure the ChargePro app is closed.",
       "not_chargepro": "The device connected but did not answer like a ChargePro controller.",
       "unsupported_model": "This controller reports the dual-battery layout, which is not supported yet. To test anyway, add it manually with 'Force single-battery layout'.",
-      "unknown": "Unexpected error."
+      "unknown": "Unexpected error.",
+      "not_connectable": "Home Assistant hears this device only through a passive scanner, so it can't connect. Use a Bluetooth adapter or an ESPHome proxy with `bluetooth_proxy: active: true`, within range of the controller."
     },
     "abort": {
       "already_configured": "This controller is already configured.",

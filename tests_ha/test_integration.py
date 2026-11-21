@@ -317,3 +317,18 @@ async def test_dual_battery_is_a_setup_error(hass: HomeAssistant) -> None:
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
     assert entry.state is ConfigEntryState.SETUP_ERROR
+
+
+async def test_manual_reports_passive_only_device(hass: HomeAssistant, ble_present) -> None:
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_ADDRESS: "manual"}
+    )
+    with patch(
+        "custom_components.bougerv_mppt.config_flow.bluetooth.async_ble_device_from_address",
+        side_effect=lambda _hass, _addr, connectable: None if connectable else BLE_DEVICE,
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_ADDRESS: ADDRESS}
+        )
+    assert result["errors"] == {"base": "not_connectable"}

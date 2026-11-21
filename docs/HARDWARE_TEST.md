@@ -1,6 +1,6 @@
 # First hardware test (Home Assistant + ESP32 Bluetooth proxy)
 
-This is the checklist for the first run of v0.1.0b1 against a real controller. The goal is
+This is the checklist for the first run of v0.1.0b2 against a real controller. The goal is
 to confirm the protocol and capture the data that settles the
 [open questions](protocol-chargepro-3.0.0.md#open-questions). Nothing here writes to
 the controller: the integration only sends Modbus function 0x03 (read holding
@@ -32,8 +32,8 @@ and this integration keeps one open all the time.
 
 1. HACS → ⋮ → *Custom repositories* → `https://github.com/NathanBland/ha-bougerv-mppt`,
    category *Integration*.
-2. Open *BougeRV MPPT (ChargePro)* in HACS and download it. v0.1.0b1 is a pre-release, so
-   if HACS doesn't offer it, use ⋮ → *Redownload* and pick `v0.1.0b1` (or turn on *Show
+2. Open *BougeRV MPPT (ChargePro)* in HACS and download it. v0.1.0b2 is a pre-release, so
+   if HACS doesn't offer it, use ⋮ → *Redownload* and pick `v0.1.0b2` (or turn on *Show
    beta versions*).
 3. Add debug logging to `configuration.yaml`, then restart Home Assistant:
 
@@ -43,6 +43,22 @@ and this integration keeps one open all the time.
      logs:
        custom_components.bougerv_mppt: debug
    ```
+
+### If Home Assistant says it can't see the controller
+
+The controller **stops advertising while any phone is connected**, so first force-quit
+the ChargePro app (or turn the phone's Bluetooth off). Don't pair the controller from the
+phone's Bluetooth settings: the app never pairs, and system pairing fails with an
+invalid-PIN error. Home Assistant doesn't pair either.
+
+Then open *Settings → System → Bluetooth* (or the Bluetooth integration's *Advertisement
+monitor*) and search for the address or `ChargePro`:
+
+- **Not listed:** no adapter or proxy hears it. Move the ESP32 closer, check the ESPHome
+  logs show it online, and check the phone has really let go.
+- **Listed, but the source isn't connectable** (setup shows "heard only through a passive
+  scanner"): the proxy needs `bluetooth_proxy: active: true`.
+- **Listed and connectable:** retry setup. If it still fails, capture the debug log.
 
 ## 3. Before adding the device
 
@@ -58,9 +74,9 @@ and this integration keeps one open all the time.
 Check, in this order:
 
 1. **Discovery.** Does *Settings → Devices & services* show *Discovered: BougeRV MPPT*?
-   - Yes: FFE0 is in the advertisement. Confirm it.
+   - Yes: confirm it. (Controllers advertise the name `ChargePro`; the app shows the same.)
    - No: go to *Add integration → BougeRV MPPT*. The list shows every connectable device,
-     FFE0 ones first. Find the controller by name or by signal strength (move the
+     likely controllers first, marked ★. Find the controller by name or by signal strength (move the
      proxy closer to tell). If it isn't listed, pick *Enter an address manually* and type
      the address from the ESPHome logs or *Settings → Bluetooth → Advertisement monitor*.
 2. **Errors you might see:**

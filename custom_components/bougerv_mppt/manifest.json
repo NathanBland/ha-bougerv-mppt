@@ -3,6 +3,10 @@
   "name": "BougeRV MPPT (ChargePro)",
   "bluetooth": [
     {
+      "local_name": "ChargePro*",
+      "connectable": true
+    },
+    {
       "service_uuid": "0000ffe0-0000-1000-8000-00805f9b34fb",
       "connectable": true
     }
@@ -21,5 +25,5 @@
   "requirements": [
     "bleak-retry-connector>=3.8.0"
   ],
-  "version": "0.1.0b1"
+  "version": "0.1.0b2"
 }

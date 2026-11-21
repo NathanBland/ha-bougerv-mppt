@@ -1,9 +1,8 @@
 """Config flow: Bluetooth discovery plus manual pick, confirmed by reading device info.
 
 FFE0 is a generic BLE-UART service, so a discovery match is only accepted after the
-device answers the ChargePro device-info read. The manual step lists every connectable
-device (FFE0 ones first) because it isn't known yet whether the controller advertises
-FFE0 at all.
+device answers the ChargePro device-info read. Controllers advertise the local name
+"ChargePro". The manual step lists every connectable device, likely controllers first.
 """
 
 from __future__ import annotations
@@ -29,6 +28,10 @@ _MANUAL = "manual"
 _MAX_LISTED = 40
 
 
+def _looks_like_chargepro(info: BluetoothServiceInfoBleak) -> bool:
+    return SERVICE_UUID in info.service_uuids or (info.name or "").startswith("ChargePro")
+
+
 class BougeRVConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
@@ -41,6 +44,9 @@ class BougeRVConfigFlow(ConfigFlow, domain=DOMAIN):
         """Connect and read device info. Returns (info, error_key)."""
         ble_device = bluetooth.async_ble_device_from_address(self.hass, address, True)
         if ble_device is None:
+            if bluetooth.async_ble_device_from_address(self.hass, address, False) is not None:
+                # Heard only by a passive scanner (e.g. a proxy without active: true).
+                return None, "not_connectable"
             return None, "device_not_found"
         try:
             bleak_client, client = await async_open_client(
@@ -109,10 +115,10 @@ class BougeRVConfigFlow(ConfigFlow, domain=DOMAIN):
             for info in bluetooth.async_discovered_service_info(self.hass, True)
             if info.address not in configured
         ]
-        found.sort(key=lambda i: (SERVICE_UUID not in i.service_uuids, -(i.rssi or -127)))
+        found.sort(key=lambda i: (not _looks_like_chargepro(i), -(i.rssi or -127)))
         options: dict[str, str] = {}
         for info in found[:_MAX_LISTED]:
-            tag = "FFE0 · " if SERVICE_UUID in info.service_uuids else ""
+            tag = "★ " if _looks_like_chargepro(info) else ""
             name = info.name or "Unnamed"
             options[info.address] = f"{tag}{name} ({info.address}, {info.rssi} dBm)"
         if not options:

@@ -96,7 +96,13 @@ class BougeRVCoordinator(DataUpdateCoordinator[ControllerData]):
             return self._client
         ble_device = bluetooth.async_ble_device_from_address(self.hass, self.address, True)
         if ble_device is None:
-            raise UpdateFailed(f"{self.address} is not in range of any Bluetooth adapter")
+            heard = bluetooth.async_ble_device_from_address(self.hass, self.address, False)
+            raise UpdateFailed(
+                f"{self.address} is heard only by a passive scanner; an active proxy is needed"
+                if heard
+                else f"{self.address} is not advertising to any connectable Bluetooth adapter"
+                " (is the ChargePro app still connected?)"
+            )
         self._bleak_client, self._client = await async_open_client(
             self.hass, ble_device, self.address, force_single_layout=self.force_single_layout
         )

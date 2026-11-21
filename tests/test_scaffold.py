@@ -17,7 +17,8 @@ def test_manifest() -> None:
     assert manifest["config_flow"] is True
     assert manifest["iot_class"] == "local_polling"
     assert manifest["bluetooth"] == [
-        {"service_uuid": "0000ffe0-0000-1000-8000-00805f9b34fb", "connectable": True}
+        {"local_name": "ChargePro*", "connectable": True},
+        {"service_uuid": "0000ffe0-0000-1000-8000-00805f9b34fb", "connectable": True},
     ]
     for key in ("version", "codeowners", "issue_tracker", "documentation"):
         assert key in manifest
