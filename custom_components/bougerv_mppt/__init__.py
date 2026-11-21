@@ -10,10 +10,27 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.typing import ConfigType
 
     from .coordinator import BougeRVConfigEntry
 
+DOMAIN = "bougerv_mppt"
 PLATFORMS = ["sensor", "binary_sensor"]
+
+
+try:
+    from homeassistant.helpers import config_validation as cv
+except ImportError:  # core/CLI used without Home Assistant installed
+    CONFIG_SCHEMA = None
+else:
+    CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    from .services import async_register_services
+
+    async_register_services(hass)
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: BougeRVConfigEntry) -> bool:

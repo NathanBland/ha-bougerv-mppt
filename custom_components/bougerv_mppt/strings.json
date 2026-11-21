@@ -4,20 +4,31 @@
     "step": {
       "user": {
         "title": "Pick a controller",
-        "description": "Choose a nearby device that offers the FFE0 service, or enter its Bluetooth address. The setup reads the controller's device info to confirm it is a ChargePro MPPT.",
+        "description": "Devices that advertise the FFE0 service are listed first. Setup reads the controller's device info to confirm it is a ChargePro MPPT. Close the ChargePro app first: the controller accepts one connection at a time.",
         "data": {
           "address": "Device"
         }
       },
       "bluetooth_confirm": {
         "description": "Set up {name}? The controller is contacted to confirm it is a ChargePro MPPT. Close the ChargePro app first: the controller accepts one connection at a time."
+      },
+      "manual": {
+        "title": "Enter the controller's address",
+        "description": "Use the Bluetooth address shown by your adapter or ESPHome proxy, for example AA:BB:CC:DD:EE:FF.",
+        "data": {
+          "address": "Bluetooth address",
+          "force_single_layout": "Force single-battery layout"
+        },
+        "data_description": {
+          "force_single_layout": "Only for testing: use the single-battery register layout even if the controller reports the dual-battery layout."
+        }
       }
     },
     "error": {
       "device_not_found": "No Bluetooth adapter or proxy can currently see this device.",
       "cannot_connect": "Could not connect. Move the controller closer to an adapter and make sure the ChargePro app is closed.",
       "not_chargepro": "The device connected but did not answer like a ChargePro controller.",
-      "unsupported_model": "This controller uses the dual-battery layout, which is not supported yet.",
+      "unsupported_model": "This controller reports the dual-battery layout, which is not supported yet. To test anyway, add it manually with 'Force single-battery layout'.",
       "unknown": "Unexpected error."
     },
     "abort": {
@@ -113,6 +124,26 @@
       },
       "fault": {
         "name": "Fault"
+      }
+    }
+  },
+  "services": {
+    "read_registers": {
+      "name": "Read registers",
+      "description": "Read holding registers from the controller (Modbus function 0x03, read-only) and return them. For checking the protocol on real hardware.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Controller",
+          "description": "The BougeRV MPPT config entry to read from."
+        },
+        "address": {
+          "name": "Start register",
+          "description": "First register, as a decimal number (0x0101 = 257)."
+        },
+        "count": {
+          "name": "Count",
+          "description": "Number of registers to read (1-64)."
+        }
       }
     }
   }

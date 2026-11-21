@@ -16,12 +16,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.bougerv_mppt.const import DOMAIN, SERVICE_UUID
+from custom_components.bougerv_mppt.const import CONF_FORCE_SINGLE_LAYOUT, DOMAIN, SERVICE_UUID
 from custom_components.bougerv_mppt.core.models import (
     SINGLE_BATTERY,
     UnsupportedDevice,
     parse_device_info,
 )
+from custom_components.bougerv_mppt.diagnostics import async_get_config_entry_diagnostics
 
 ADDRESS = "AA:BB:CC:DD:EE:FF"
 MODEL = b"MPPT-40A        "
@@ -59,14 +60,18 @@ SERVICE_INFO = BluetoothServiceInfoBleak(
 )
 
 
-def _fake_open(error: Exception | None = None):
-    async def _open(_hass, _device, _address):
+def _fake_open(error: Exception | None = None, calls: list | None = None):
+    async def _open(_hass, _device, _address, *, force_single_layout=False):
+        if calls is not None:
+            calls.append(force_single_layout)
         if error is not None:
             raise error
         bleak_client = MagicMock(is_connected=True, disconnect=AsyncMock())
         client = SimpleNamespace(
             device_info=INFO,
+            profile=SINGLE_BATTERY,
             poll=AsyncMock(return_value=(DATA, {"live": LIVE})),
+            read_registers=AsyncMock(side_effect=lambda address, count: list(range(count))),
             stop=AsyncMock(),
         )
         return bleak_client, client
@@ -131,16 +136,62 @@ async def test_user_flow_errors_then_success(
 ) -> None:
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
     assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "user"
     with patch("custom_components.bougerv_mppt.config_flow.async_open_client", _fake_open(error)):
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], {CONF_ADDRESS: ADDRESS}
         )
+    assert result["step_id"] == "manual"
     assert result["errors"] == {"base": key}
     with patch("custom_components.bougerv_mppt.config_flow.async_open_client", _fake_open()):
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], {CONF_ADDRESS: ADDRESS}
         )
     assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"] == {CONF_ADDRESS: ADDRESS}
+
+
+async def test_manual_address_with_forced_layout(hass: HomeAssistant, ble_present) -> None:
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_ADDRESS: "manual"}
+    )
+    assert result["step_id"] == "manual"
+    calls: list[bool] = []
+    with patch(
+        "custom_components.bougerv_mppt.config_flow.async_open_client", _fake_open(calls=calls)
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_ADDRESS: " aa:bb:cc:dd:ee:ff ", CONF_FORCE_SINGLE_LAYOUT: True},
+        )
+    assert calls == [True]
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"] == {CONF_ADDRESS: ADDRESS, CONF_FORCE_SINGLE_LAYOUT: True}
+
+
+async def test_user_flow_lists_non_ffe0_devices(hass: HomeAssistant, ble_present) -> None:
+    other = BluetoothServiceInfoBleak(
+        name="Other",
+        address="11:22:33:44:55:66",
+        rssi=-40,
+        manufacturer_data={},
+        service_data={},
+        service_uuids=[],
+        source="local",
+        device=BLEDevice("11:22:33:44:55:66", "Other", None),
+        advertisement=SERVICE_INFO.advertisement,
+        connectable=True,
+        time=0,
+        tx_power=None,
+    )
+    with patch(
+        "custom_components.bougerv_mppt.config_flow.bluetooth.async_discovered_service_info",
+        return_value=[other, SERVICE_INFO],
+    ):
+        result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    options = list(result["data_schema"].schema[CONF_ADDRESS].container)
+    assert options == [ADDRESS, "11:22:33:44:55:66", "manual"]
 
 
 async def test_setup_entry_creates_entities(hass: HomeAssistant) -> None:
@@ -181,8 +232,57 @@ async def test_setup_entry_creates_entities(hass: HomeAssistant) -> None:
     # Raw diagnostic registers are disabled by default.
     assert hass.states.get(f"sensor.{prefix}_register_0x010a") is None
 
+    # read_registers action returns the registers from the shared connection.
+    response = await hass.services.async_call(
+        DOMAIN,
+        "read_registers",
+        {"config_entry_id": entry.entry_id, "address": 0x010A, "count": 3},
+        blocking=True,
+        return_response=True,
+    )
+    assert response == {
+        "start": "0x010A",
+        "registers": {
+            "0x010A": {"hex": "0000", "value": 0},
+            "0x010B": {"hex": "0001", "value": 1},
+            "0x010C": {"hex": "0002", "value": 2},
+        },
+    }
+
+    # Diagnostics include a fresh read of every documented block, never the password block.
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    assert diag["profile"] == "single_battery"
+    assert diag["device_info"]["model"] == "MPPT-40A"
+    assert diag["fresh_reads"]["live_0x0101"][:2] == ["0000", "0001"]
+    assert not any("0310" in name for name in diag["fresh_reads"])
+    assert len(diag["poll_history"]) == 1
+
     assert await hass.config_entries.async_unload(entry.entry_id)
     assert entry.state is ConfigEntryState.NOT_LOADED
+
+
+async def test_forced_layout_is_passed_to_client(hass: HomeAssistant) -> None:
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id=ADDRESS,
+        data={CONF_ADDRESS: ADDRESS, CONF_FORCE_SINGLE_LAYOUT: True},
+    )
+    entry.add_to_hass(hass)
+    calls: list[bool] = []
+    with (
+        patch(
+            "custom_components.bougerv_mppt.coordinator.bluetooth.async_ble_device_from_address",
+            return_value=BLE_DEVICE,
+        ),
+        patch(
+            "custom_components.bougerv_mppt.coordinator.async_open_client",
+            _fake_open(calls=calls),
+        ),
+        patch("homeassistant.setup.async_process_deps_reqs", AsyncMock()),
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    assert calls == [True]
 
 
 async def test_setup_retries_when_device_missing(hass: HomeAssistant) -> None:

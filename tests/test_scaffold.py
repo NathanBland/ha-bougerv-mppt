@@ -67,3 +67,20 @@ def test_config_flow_errors_translated() -> None:
     strings = json.loads((INTEGRATION / "strings.json").read_text(encoding="utf-8"))
     errors = set(re.findall(r'return None, "([a-z_]+)"', source))
     assert errors <= set(strings["config"]["error"])
+
+
+def test_manifest_key_order() -> None:
+    """hassfest wants domain, name, then the rest sorted."""
+    manifest = json.loads((INTEGRATION / "manifest.json").read_text(encoding="utf-8"))
+    keys = list(manifest)
+    assert keys[:2] == ["domain", "name"]
+    assert keys[2:] == sorted(keys[2:])
+
+
+def test_services_have_strings() -> None:
+    strings = json.loads((INTEGRATION / "strings.json").read_text(encoding="utf-8"))
+    text = (INTEGRATION / "services.yaml").read_text(encoding="utf-8")
+    services = re.findall(r"^([a-z_]+):$", text, re.M)
+    fields = re.findall(r"^    ([a-z_]+):$", text, re.M)
+    assert services == list(strings["services"])
+    assert set(fields) == set(strings["services"]["read_registers"]["fields"])

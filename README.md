@@ -5,10 +5,12 @@ the **ChargePro+ 2.0** app (built for the BougeRV 40A MPPT). It talks to the con
 directly over Bluetooth LE, through a local adapter or an ESPHome Bluetooth proxy. No
 cloud, no account.
 
-> **Status: v0.1.0, untested on hardware.** The protocol was worked out by statically
-> analysing ChargePro+ 2.0 version 3.0.0. See
+> **Status: v0.1.0b1 (beta), untested on hardware.** The protocol was worked out by
+> statically analysing ChargePro+ 2.0 version 3.0.0. See
 > [docs/protocol-chargepro-3.0.0.md](docs/protocol-chargepro-3.0.0.md) for the protocol
-> and the open questions that still need a real controller to answer.
+> and the open questions that still need a real controller to answer, and
+> [docs/HARDWARE_TEST.md](docs/HARDWARE_TEST.md) for how to capture the data that answers
+> them.
 
 ## What you get
 
@@ -47,11 +49,29 @@ Home Assistant keeps its connection open while it polls (every 10 s).
   generic BLE serial service also used by other gadgets, so setup connects and reads the
   controller's device info before adding it. Devices that don't answer like a ChargePro
   controller are dropped.
-- **Manual:** *Settings → Devices & services → Add integration → BougeRV MPPT* lists nearby
-  `FFE0` devices, or lets you type a Bluetooth address.
+- **Manual:** *Settings → Devices & services → Add integration → BougeRV MPPT* lists every
+  connectable Bluetooth device nearby (`FFE0` devices first), or lets you type an address.
 
 Dual-battery ChargePro controllers use a different register layout and are rejected with
-"unsupported model" for now (see [Adding models](#adding-models)).
+"unsupported model" for now (see [Adding models](#adding-models)). For testing, the manual
+address step has a **Force single-battery layout** option that reads them with the
+single-battery layout anyway.
+
+### Troubleshooting tools
+
+- **Diagnostics** (device page → ⋮ → Download diagnostics): the advertisement, device info,
+  a fresh read of every documented read-only register block, and the last ~15 minutes of
+  raw polls.
+- **`bougerv_mppt.read_registers` action** (Developer tools → Actions, tick *Return
+  response*): reads any holding registers with Modbus function 0x03. Nothing is ever
+  written to the controller.
+- **Debug logging** shows every frame sent and received:
+
+  ```yaml
+  logger:
+    logs:
+      custom_components.bougerv_mppt: debug
+  ```
 
 ## Energy dashboard
 

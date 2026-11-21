@@ -1,0 +1,22 @@
+read_registers:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: bougerv_mppt
+    address:
+      required: true
+      example: 257
+      selector:
+        number:
+          min: 0
+          max: 65535
+          mode: box
+    count:
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 64
+          mode: box

@@ -10,7 +10,16 @@ from bleak import BleakClient
 from bleak.backends.characteristic import BleakGATTCharacteristic
 
 from .modbus import ModbusError, ResponseAssembler, build_read, parse_read_response
-from .models import DEVICE_INFO_BLOCK, Block, ControllerData, DeviceInfo, Profile, parse_device_info
+from .models import (
+    DEVICE_INFO_BLOCK,
+    SINGLE_BATTERY,
+    Block,
+    ControllerData,
+    DeviceInfo,
+    Profile,
+    UnsupportedDevice,
+    parse_device_info,
+)
 from .models import select_profile as _select_profile
 
 _LOGGER = logging.getLogger(__name__)
@@ -45,8 +54,12 @@ class ChargeProClient:
         self.device_info: DeviceInfo | None = None
         self.profile: Profile | None = None
 
-    async def start(self) -> DeviceInfo:
-        """Subscribe to notifications, read device info, choose the profile."""
+    async def start(self, *, force_single_layout: bool = False) -> DeviceInfo:
+        """Subscribe to notifications, read device info, choose the profile.
+
+        ``force_single_layout`` uses the single-battery layout even when the device
+        reports the dual-battery layout (for testing on unconfirmed hardware).
+        """
         char = self._client.services.get_characteristic(CHAR_UUID)
         if char is None:
             raise ModbusError("characteristic FFE1 not found")
@@ -54,13 +67,25 @@ class ChargeProClient:
         await self._client.start_notify(char, self._on_notify)
         regs = await self.read_block(DEVICE_INFO_BLOCK)
         self.device_info = parse_device_info(regs)
-        self.profile = _select_profile(self.device_info)
+        _LOGGER.debug("Device info %s", self.device_info)
+        try:
+            self.profile = _select_profile(self.device_info)
+        except UnsupportedDevice:
+            if not force_single_layout:
+                raise
+            _LOGGER.warning(
+                "%s reports layout %s; forcing the single-battery layout as configured",
+                self.device_info.model,
+                self.device_info.layout,
+            )
+            self.profile = SINGLE_BATTERY
         return self.device_info
 
     def _on_notify(self, _sender: object, data: bytearray) -> None:
         pending = self._pending
+        _LOGGER.debug("RX %s", bytes(data).hex(" "))
         if pending is None or pending.done():
-            _LOGGER.debug("Ignoring unsolicited notification %s", bytes(data).hex())
+            _LOGGER.debug("Ignoring unsolicited notification")
             return
         try:
             frame = self._assembler.feed(bytes(data))
@@ -107,6 +132,7 @@ class ChargeProClient:
         assert self._char is not None
         # The app writes with response (BluetoothKit ``write``); fall back if unsupported.
         response = "write" in self._char.properties
+        _LOGGER.debug("TX %s", data.hex(" "))
         await self._client.write_gatt_char(self._char, data, response=response)
 
     async def stop(self) -> None:
