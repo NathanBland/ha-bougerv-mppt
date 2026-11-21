@@ -1,0 +1,119 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Pick a controller",
+        "description": "Choose a nearby device that offers the FFE0 service, or enter its Bluetooth address. The setup reads the controller's device info to confirm it is a ChargePro MPPT.",
+        "data": {
+          "address": "Device"
+        }
+      },
+      "bluetooth_confirm": {
+        "description": "Set up {name}? The controller is contacted to confirm it is a ChargePro MPPT. Close the ChargePro app first: the controller accepts one connection at a time."
+      }
+    },
+    "error": {
+      "device_not_found": "No Bluetooth adapter or proxy can currently see this device.",
+      "cannot_connect": "Could not connect. Move the controller closer to an adapter and make sure the ChargePro app is closed.",
+      "not_chargepro": "The device connected but did not answer like a ChargePro controller.",
+      "unsupported_model": "This controller uses the dual-battery layout, which is not supported yet.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This controller is already configured.",
+      "not_chargepro": "This device did not answer like a ChargePro controller."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "battery_soc": {
+        "name": "Battery state of charge"
+      },
+      "battery_voltage": {
+        "name": "Battery voltage"
+      },
+      "charge_current": {
+        "name": "Charge current"
+      },
+      "charge_power": {
+        "name": "Charge power"
+      },
+      "battery_temperature": {
+        "name": "Battery temperature"
+      },
+      "pv_voltage": {
+        "name": "Solar voltage"
+      },
+      "charge_stage": {
+        "name": "Charge stage",
+        "state": {
+          "off": "Not charging",
+          "starting": "Starting",
+          "mppt": "MPPT",
+          "equalize": "Equalize",
+          "boost": "Boost",
+          "float": "Float",
+          "current_limiting": "Current limiting"
+        }
+      },
+      "load_voltage": {
+        "name": "Load voltage"
+      },
+      "load_current": {
+        "name": "Load current"
+      },
+      "load_power": {
+        "name": "Load power"
+      },
+      "load_mode": {
+        "name": "Load mode",
+        "state": {
+          "manual": "Manual",
+          "automatic": "Automatic"
+        }
+      },
+      "controller_temperature": {
+        "name": "Controller temperature"
+      },
+      "faults": {
+        "name": "Faults"
+      },
+      "running_days": {
+        "name": "Running days"
+      },
+      "today_charge_energy": {
+        "name": "Energy charged today"
+      },
+      "today_discharge_energy": {
+        "name": "Energy discharged today"
+      },
+      "today_max_charge_power": {
+        "name": "Peak charge power today"
+      },
+      "today_max_battery_voltage": {
+        "name": "Highest battery voltage today"
+      },
+      "today_min_battery_voltage": {
+        "name": "Lowest battery voltage today"
+      },
+      "total_charge_energy": {
+        "name": "Total energy charged"
+      },
+      "total_discharge_energy": {
+        "name": "Total energy discharged"
+      },
+      "raw_register": {
+        "name": "Register {register}"
+      }
+    },
+    "binary_sensor": {
+      "load_on": {
+        "name": "Load output"
+      },
+      "fault": {
+        "name": "Fault"
+      }
+    }
+  }
+}

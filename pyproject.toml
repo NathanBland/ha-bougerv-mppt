@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bougerv-mppt"
+version = "0.1.0"
+description = "Read-only BLE support and Home Assistant integration for BougeRV / ChargePro MPPT solar charge controllers"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "Nathan Bland" }]
+dependencies = [
+  "bleak>=0.22,<4",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8.4",
+  "pytest-asyncio>=1.1",
+  "ruff>=0.12",
+]
+
+[project.scripts]
+bougerv-mppt = "bougerv_mppt.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src", "."]
+include = ["bougerv_mppt*", "custom_components.bougerv_mppt*"]
+namespaces = true
+
+[tool.pytest.ini_options]
+addopts = "-q"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC"]
