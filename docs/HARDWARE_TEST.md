@@ -1,6 +1,6 @@
 # First hardware test (Home Assistant + ESP32 Bluetooth proxy)
 
-This is the checklist for the first run of v0.1.0b2 against a real controller. The goal is
+This is the checklist for the first run of v0.1.0b3 against a real controller. The goal is
 to confirm the protocol and capture the data that settles the
 [open questions](protocol-chargepro-3.0.0.md#open-questions). Nothing here writes to
 the controller: the integration only sends Modbus function 0x03 (read holding
@@ -32,8 +32,8 @@ and this integration keeps one open all the time.
 
 1. HACS → ⋮ → *Custom repositories* → `https://github.com/NathanBland/ha-bougerv-mppt`,
    category *Integration*.
-2. Open *BougeRV MPPT (ChargePro)* in HACS and download it. v0.1.0b2 is a pre-release, so
-   if HACS doesn't offer it, use ⋮ → *Redownload* and pick `v0.1.0b2` (or turn on *Show
+2. Open *BougeRV MPPT (ChargePro)* in HACS and download it. v0.1.0b3 is a pre-release, so
+   if HACS doesn't offer it, use ⋮ → *Redownload* and pick `v0.1.0b3` (or turn on *Show
    beta versions*).
 3. Add debug logging to `configuration.yaml`, then restart Home Assistant:
 

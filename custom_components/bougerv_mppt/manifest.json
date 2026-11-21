@@ -25,5 +25,5 @@
   "requirements": [
     "bleak-retry-connector>=3.8.0"
   ],
-  "version": "0.1.0b2"
+  "version": "0.1.0b3"
 }

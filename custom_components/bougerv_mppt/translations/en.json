@@ -14,7 +14,7 @@
       },
       "manual": {
         "title": "Enter the controller's address",
-        "description": "Use the Bluetooth address shown by your adapter or ESPHome proxy, for example AA:BB:CC:DD:EE:FF.",
+        "description": "Use the Bluetooth address shown by your adapter or ESPHome proxy, for example AA:BB:CC:DD:EE:FF.\n\n**Bluetooth right now:** {connectable_scanners} connectable adapter(s)/proxies of {all_scanners} in total, hearing {connectable_devices} connectable device(s) of {all_devices} in total. If there are no connectable adapters, Home Assistant can't connect to anything: add an ESPHome proxy with `bluetooth_proxy: active: true`, or a local adapter.",
         "data": {
           "address": "Bluetooth address",
           "force_single_layout": "Force single-battery layout"

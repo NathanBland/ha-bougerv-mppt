@@ -5,7 +5,7 @@ the **ChargePro+ 2.0** app (built for the BougeRV 40A MPPT). It talks to the con
 directly over Bluetooth LE, through a local adapter or an ESPHome Bluetooth proxy. No
 cloud, no account.
 
-> **Status: v0.1.0b2 (beta), untested on hardware.** The protocol was worked out by
+> **Status: v0.1.0b3 (beta), untested on hardware.** The protocol was worked out by
 > statically analysing ChargePro+ 2.0 version 3.0.0. See
 > [docs/protocol-chargepro-3.0.0.md](docs/protocol-chargepro-3.0.0.md) for the protocol
 > and the open questions that still need a real controller to answer, and

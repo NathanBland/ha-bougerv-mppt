@@ -32,6 +32,22 @@ def _looks_like_chargepro(info: BluetoothServiceInfoBleak) -> bool:
     return SERVICE_UUID in info.service_uuids or (info.name or "").startswith("ChargePro")
 
 
+def _bluetooth_status(hass) -> dict[str, str]:
+    """What Home Assistant hears right now, shown on the manual form to explain errors."""
+    try:
+        return {
+            "connectable_scanners": str(bluetooth.async_scanner_count(hass, connectable=True)),
+            "all_scanners": str(bluetooth.async_scanner_count(hass, connectable=False)),
+            "connectable_devices": str(len(bluetooth.async_discovered_service_info(hass, True))),
+            "all_devices": str(len(bluetooth.async_discovered_service_info(hass, False))),
+        }
+    except Exception:  # never let the status line break the form
+        _LOGGER.debug("Could not read Bluetooth status", exc_info=True)
+        return dict.fromkeys(
+            ("connectable_scanners", "all_scanners", "connectable_devices", "all_devices"), "?"
+        )
+
+
 class BougeRVConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
@@ -143,6 +159,7 @@ class BougeRVConfigFlow(ConfigFlow, domain=DOMAIN):
         defaults = user_input or {}
         return self.async_show_form(
             step_id="manual",
+            description_placeholders=_bluetooth_status(self.hass),
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_ADDRESS, default=defaults.get(CONF_ADDRESS, "")): str,

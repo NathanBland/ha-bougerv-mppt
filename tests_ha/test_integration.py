@@ -332,3 +332,18 @@ async def test_manual_reports_passive_only_device(hass: HomeAssistant, ble_prese
             result["flow_id"], {CONF_ADDRESS: ADDRESS}
         )
     assert result["errors"] == {"base": "not_connectable"}
+
+
+async def test_manual_form_shows_bluetooth_status(hass: HomeAssistant, ble_present) -> None:
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_ADDRESS: "manual"}
+    )
+    status = result["description_placeholders"]
+    assert status["connectable_devices"] == "1"
+    assert set(status) == {
+        "connectable_scanners",
+        "all_scanners",
+        "connectable_devices",
+        "all_devices",
+    }
