@@ -1,7 +1,9 @@
 # ChargePro+ 2.0 3.0.0 — BLE protocol (BougeRV 40A MPPT)
 
-Static analysis of the vendor Android app. Nothing here has been checked against
-real hardware yet; see [Open questions](#open-questions).
+Static analysis of the vendor Android app, checked on 2026-11-21 against one controller:
+**MS-4840N, firmware 1.01** (BougeRV 40A, 12 V lithium bank), through an ESPHome Bluetooth
+proxy. Results are tagged **[H]**; see [Hardware check](#hardware-check-ms-4840n-fw-101) and
+[Open questions](#open-questions).
 
 ## Source
 
@@ -29,9 +31,10 @@ Decompiled code and APK strings were treated as untrusted data.
 | Connect | 5000 ms timeout, 1 retry, no bonding / PIN / auth handshake | [J] `BleConnectOptions` in `RightLayout` — Confirmed |
 | Scan filter | none: every device with a name other than `"NULL"` is listed | [J] `RightLayout$3.onDeviceFounded` — Confirmed |
 
-The device name the controller advertises and whether it puts FFE0 in its advertisement
-are not known from the app. FFE0/FFE1 is the common "HM-10 style" UART service, so any
-discovery match must be confirmed by reading the device-info block (§5).
+[H] The MS-4840N advertises local name `ChargePro`, lists service `FFE0`, and sends
+manufacturer data under company ID `0x8979` (35193): `88 A0` followed by its own 6-byte
+MAC. FFE0/FFE1 is the common "HM-10 style" UART service, so an FFE0-only match must still be
+confirmed by reading the device-info block (§5).
 
 ## 2. Framing: Modbus-RTU over BLE
 
@@ -106,10 +109,11 @@ recognised and rejected with a clear error, so they can be added later.
 
 | Index | Register | Meaning | Confidence |
 |---|---|---|---|
-| 0 | 0x000A | high byte: rated/max current (A) | Inferred (used for dual-battery limits) |
+| 0 | 0x000A | high byte: rated/max current (A) | Inferred; [H] `0x28` = 40 on the 40A |
+| 1 | 0x000B | high byte: likely max battery voltage (V); low byte unknown | [H] `0x300C` (48, 12) on the MS-4840N; Unknown |
 | 2–9 | 0x000C–0x0013 | model name, ASCII, double spaces removed | Confirmed |
 | 10 | 0x0014 | firmware / version ÷ 100 (shown in side drawer) | Confirmed |
-| 14 | 0x0018 | layout: 1 = dual battery, 3 = DC-DC, otherwise single | Confirmed |
+| 14 | 0x0018 | layout: 1 = dual battery, 3 = DC-DC, otherwise single | Confirmed; [H] `140` on the MS-4840N (single) |
 | 15 | 0x0019 | 1 = settings password enabled | Confirmed |
 
 Debug sample in `MainActivity.Response` (only 15 words):
@@ -132,12 +136,14 @@ Debug sample in `MainActivity.Response` (only 15 words):
 | 6 | 0x0107 | load current | ×0.01 A | Confirmed |
 | 7 | 0x0108 | load power | W | Confirmed |
 | 8 | 0x0109 | PV (solar) voltage | ×0.1 V | Confirmed |
-| 9–11 | 0x010A–0x010C | not used by the app | — | Unknown (PV current/power likely) |
+| 9 | 0x010A | not used by the app; equals today's peak charging power (0x0402) | W | [H] Inferred |
+| 10 | 0x010B | not used by the app; equals energy charged today (0x0400) | Wh | [H] Inferred |
+| 11 | 0x010C | not used by the app; likely energy discharged today (0x0401) | Wh | [H] 0 = 0 so far; Unknown |
 | 12 | 0x010D | high byte: DC load on (≠ 0); low byte: charge stage | enum below | Confirmed |
 | 13 | 0x010E | fault bit field | bits below | Confirmed |
 | 14 | 0x010F | total running days | d | Confirmed |
-| 15–16 | 0x0110–0x0111 | lifetime energy, u32 | Wh | Confirmed value; Inferred = **charge** |
-| 17–18 | 0x0112–0x0113 | lifetime energy, u32 | Wh | Confirmed value; Inferred = **discharge** |
+| 15–16 | 0x0110–0x0111 | lifetime energy, u32 | Wh | Confirmed value; Inferred = **charge**; [H] 241 518 Wh with 0 Wh discharged and the load output never used |
+| 17–18 | 0x0112–0x0113 | lifetime energy, u32 | Wh | Confirmed value; Inferred = **discharge**; [H] 0 |
 | 19 | 0x0114 | DC-DC direction (layout 3 only) | — | Inferred |
 | 20 | 0x0115 | external voltage (layout 3 only): (v − 32768) ÷ 10 | V | Inferred |
 | 21 | 0x0116 | used in dual-battery layout only | — | Inferred |
@@ -233,12 +239,41 @@ From `Command` ([J], CRCs [V]):
 Per poll (default every 10 s; the app uses ~5 s): `0x0101` × 22, `0x0400` × 5, `0x0121` × 1.
 Device info `0x000A` × 16 is read on each new connection.
 
+## Hardware check (MS-4840N, fw 1.01)
+
+One controller, read on 2026-11-21 in late afternoon (no charge, load output off).
+Raw `0x0101` × 22:
+
+```
+005F 0084 0000 0000 1319 0000 0000 0000 0087 023C 0445
+0000 0000 0000 06B4 0003 AF6E 0000 0000 0000 0000 0000
+```
+
+→ SOC 95 %, battery 13.2 V, 0 A / 0 W, controller 19 °C / battery 25 °C, load 0, PV 13.5 V,
+load off, stage 0 (not charging), no faults, 1716 running days, lifetime 241 518 Wh charged /
+0 Wh discharged. Today `0x0400` × 5: `0445 0000 023C 008D 007D` → 1093 Wh, 0 Wh, 572 W,
+14.1 V, 12.5 V. All values are in plausible ranges; the single-battery parser needed no changes.
+
+Other blocks read once (read only):
+
+- `0x0100` × 23 is the same data shifted by one register; its first word, `0x0100`, is `000C`
+  (12, likely the system voltage).
+- `0x0200` × 24 settings: `0000 0001 000C 0004 0090 0090 0090 0084 007E 0078 006F 0000 0078
+  000A 0005 00FF 0003 0000 …`. After the app's `regs[1:]` drop: system voltage 12, battery type
+  4 (lithium), charge thresholds 14.4 V, matching §9.
+- `0x0210` × 1 (charging switch): `0003`. `0x0300` × 12 (load timers): all zero.
+
 ## Open questions
 
-To settle on hardware:
-
-1. What registers 0x010A–0x010C hold (exposed as disabled diagnostic raw sensors).
-2. Whether temperatures are signed below 0 °C.
-3. Which lifetime total is charge and which is discharge.
-4. The advertised name, and whether FFE0 is in the advertisement.
-5. Whether the 40A reports `r[14]` ≠ 1 (single layout), as the app logic expects.
+1. ~~What registers 0x010A–0x010C hold.~~ [H] 0x010A and 0x010B mirror today's peak charging
+   power and energy charged today. 0x010C is most likely energy discharged today (both were 0);
+   confirm on a day the load output is used.
+2. Whether temperatures are signed below 0 °C. Still open (needs a reading below freezing).
+   The battery reading of exactly 25 °C while the controller read 19 °C may be a default
+   when no battery temperature probe is fitted; to check.
+3. Which lifetime total is charge and which is discharge. [H] Very likely as inferred
+   (241.5 kWh charged, 0 discharged with the load output unused); still to compare with the
+   app's history screen.
+4. ~~The advertised name, and whether FFE0 is in the advertisement.~~ [H] `ChargePro`, FFE0
+   advertised (§1).
+5. ~~Whether the 40A reports `r[14]` ≠ 1.~~ [H] It reports 140, so the single layout applies.

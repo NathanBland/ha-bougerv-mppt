@@ -5,8 +5,9 @@ the **ChargePro+ 2.0** app (built for the BougeRV 40A MPPT). It talks to the con
 directly over Bluetooth LE, through a local adapter or an ESPHome Bluetooth proxy. No
 cloud, no account.
 
-> **Status: v0.1.0b3 (beta), untested on hardware.** The protocol was worked out by
-> statically analysing ChargePro+ 2.0 version 3.0.0. See
+> **Status: v0.1.0b3 (beta).** The protocol was worked out by statically analysing
+> ChargePro+ 2.0 version 3.0.0, and has been checked on one controller (MS-4840N,
+> firmware 1.01) through an ESPHome Bluetooth proxy. See
 > [docs/protocol-chargepro-3.0.0.md](docs/protocol-chargepro-3.0.0.md) for the protocol
 > and the open questions that still need a real controller to answer, and
 > [docs/HARDWARE_TEST.md](docs/HARDWARE_TEST.md) for how to capture the data that answers
@@ -22,7 +23,7 @@ cloud, no account.
 | Controller | controller temperature, faults (text, with `fault_code` and `faults` attributes), fault (problem binary sensor), running days (diagnostic) |
 | Today | energy charged, energy discharged, peak charge power, highest and lowest battery voltage |
 | Lifetime | total energy charged, total energy discharged |
-| Diagnostics | raw registers 0x010A–0x010C (disabled by default; the app never shows them, likely PV current/power) |
+| Diagnostics | raw registers 0x010A–0x010C (disabled by default; on hardware they mirror today's peak power and energy, so they add nothing) |
 
 The device page shows the model and firmware read from the controller.
 

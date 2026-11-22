@@ -25,7 +25,17 @@ bluetooth_proxy:
 ```
 
 Add the ESPHome device to Home Assistant, and place it within a few metres of the
-controller for the first test. One active proxy can hold about three connections at once,
+controller for the first test.
+
+**Match the proxy firmware to your Home Assistant version.** Home Assistant before 2025.10
+can't connect to ESPHome 2025.10 or later unless the device has an API password: the device
+stops answering the login request those versions wait for. The symptom is a connection
+that drops every 30 s, logged as `Timeout waiting for HelloResponse, ConnectResponse after
+30.0s`, while the ESP32's serial log shows `Home Assistant … connected` and then
+`CONNECTION_CLOSED` 30 s later. The ready-made web-installer firmware is always the newest
+release, so on an older Home Assistant either upgrade it, or build the proxy with ESPHome
+2025.9.x (`pip install esphome==2025.9.3`, the YAML above, `esphome run`) and don't accept
+firmware updates until Home Assistant is upgraded. One active proxy can hold about three connections at once,
 and this integration keeps one open all the time.
 
 ## 2. Install the integration
